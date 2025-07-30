@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Girlfriends Day <3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-cloud@1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --spotlight-x: 50%;
+            --spotlight-y: 50%;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a000a;
+            color: #fce4ec;
+            position: relative;
+        }
+        /* UPDATED: Brighter, Denser, and Smaller Spotlight Effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: radial-gradient(
+                circle at var(--spotlight-x) var(--spotlight-y),
+                rgba(236, 72, 153, 0.6) 0%,      /* Brighter center */
+                rgba(219, 39, 119, 0.4) 10%,     /* Denser gradient */
+                rgba(190, 24, 93, 0.2) 20%,     /* Denser gradient */
+                transparent 35%                 /* Smaller overall size */
+            );
+            z-index: 100;
+        }
+        .header-font { font-family: 'Pacifico', cursive; }
+        .card {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            padding: 1.5rem;
+            transition: transform 0.2s ease-in-out, background-color 0.2s;
+            display: flex; flex-direction: column;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .card-title { font-size: 1.5rem; font-weight: 700; color: #f9a8d4; text-align: center; margin-bottom: 1rem; }
+        .chart-container { position: relative; height: 220px; flex-grow: 1; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; text-align: center; margin-top: 1rem; }
+        .stat-value { font-size: 2rem; font-weight: 700; color: #fce4ec; }
+        .stat-label { font-size: 0.8rem; color: #f472b6; text-transform: uppercase; }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-12">
+            <h1 class="header-font text-5xl md:text-6xl text-[#f9a8d4]">Happy Girlfriend's Day <3</h1>
+            <p class="text-lg text-pink-200 mt-2">To the prettiest girl ever !</p>
+        </header>
+
+        <!-- Main Grid for Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+            <!-- Heatmap Card (1) -->
+            <div class="card md:col-span-2">
+                <h2 class="card-title">Chat Intensity Heatmap</h2>
+                <div id="heatmap" class="w-full overflow-x-auto p-2 flex justify-center"></div>
+            </div>
+
+
+            <!-- 2-in-a-row Cards, first 2 rows (3) -->
+            <!-- Who Talks More? -->
+            <div class="card">
+                <h2 class="card-title">Ke beshi pyak pyak kore?</h2>
+                <div class="chart-container"><canvas id="messageChart"></canvas></div>
+            </div>
+            <!-- Question Master -->
+            <div class="card">
+                <h2 class="card-title">Questions asked</h2>
+                <div class="chart-container"><canvas id="questionChart"></canvas></div>
+            </div>
+            <!-- Conversation Starter -->
+            <div class="card">
+                <h2 class="card-title">Ke beshi bhalobashe?</h2>
+                <div class="chart-container"><canvas id="starterChart"></canvas></div>
+            </div>
+
+            <!-- Double Texter -->
+            <div class="card">
+                <h2 class="card-title">Ke onek beshi bhalobashe?</h2>
+                <div class="chart-container"><canvas id="doubleTextChart"></canvas></div>
+            </div>
+
+            <!-- Common Words Card (2) -->
+            <div class="card md:col-span-2">
+                <h2 class="card-title">Top Words We Both Use</h2>
+                <div id="commonWordCloud" class="w-full h-80 flex items-center justify-center relative"></div>
+            </div>
+
+            <!-- Most Used Words Pie Charts -->
+            <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="card">
+                    <h2 class="card-title">Most Used Words - Dhruv</h2>
+                    <div class="chart-container !h-80">
+                        <canvas id="dhruvWordsChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2 class="card-title">Most Used Words - Kavu</h2>
+                    <div class="chart-container !h-80">
+                        <canvas id="kavuWordsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dear Letters Card (4) -->
+            <div class="card md:col-span-2">
+                <h2 class="card-title">Dear Dhruv / Dear Kavu over time</h2>
+                <div class="chart-container !h-80"><canvas id="dearLetterChart"></canvas></div>
+            </div>
+
+            <!-- Remaining 2-in-a-row Cards (5) -->
+            <!-- Nickname Score -->
+            <div class="card">
+                <h2 class="card-title">Dhruv vs Kavu</h2>
+                <div class="chart-container"><canvas id="nicknameChart"></canvas></div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Prem Stats</h2>
+                <div class="stat-grid mt-8">
+                    <div>
+                        <div class="stat-value">{{ analysis['Dhruv'].bhalobashi_count if 'Dhruv' in analysis else 0 }}</div>
+                        <div class="stat-label">"Bhalobashi" (Him)</div>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ analysis['Kavu'].bhalobashi_count if 'Kavu' in analysis else 0 }}</div>
+                        <div class="stat-label">"Bhalobashi" (Her)</div>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ analysis['Dhruv'].ahaan_count if 'Dhruv' in analysis else 0 }}</div>
+                        <div class="stat-label">"Ahaaan" (Him)</div>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ analysis['Kavu'].ahaan_count if 'Kavu' in analysis else 0 }}</div>
+                        <div class="stat-label">"Ahaaan" (Her)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Ke beshi hashay?</h2>
+                <div class="chart-container"><canvas id="laughChart"></canvas></div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Ke motka beshi gorom koray?</h2>
+                <div class="chart-container"><canvas id="madChart"></canvas></div>
+            </div>
+
+            <div class="card md:col-span-2">
+                <h2 class="card-title">Vella chart</h2>
+                <p class="text-center text-sm text-pink-300 -mt-3 mb-2">This chart smooths out daily chats to show our overall communication trend over time.</p>
+                <div class="chart-container !h-80"><canvas id="rollingAvgChart"></canvas></div>
+            </div>
+
+
+            <div class="md:col-span-2 flex items-center justify-center my-4">
+                <div class="w-2/3 h-1 bg-pink-400 animate-pulse rounded-full"></div>
+            </div>
+
+
+            <div class="card">
+                <h2 class="card-title">Longest Non-Stop Chat Streak</h2>
+                <div class="stat-grid mt-6">
+                    <div>
+                        <div class="stat-value" id="dhruv-streak">--</div>
+                        <div class="stat-label">Dhruv</div>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="kavu-streak">--</div>
+                        <div class="stat-label">Kavu</div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="card">
+                <h2 class="card-title">Longest Gap Without Talking</h2>
+                <div class="stat-grid mt-6">
+                    <div>
+                        <div class="stat-value" id="dhruv-gap">--</div>
+                        <div class="stat-label">Dhruv</div>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="kavu-gap">--</div>
+                        <div class="stat-label">Kavu</div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="md:col-span-2 flex items-center justify-center my-6">
+                <div class="flex items-center space-x-4 animate-fade-in">
+                    <span class="text-pink-400 text-3xl font-mono leading-none animate-bounce">❤</span>
+                    <div class="w-40 h-1 bg-pink-400 rounded-full animate-pulse"></div>
+                    <span class="text-pink-400 text-3xl font-mono leading-none animate-bounce">❤</span>
+                </div>
+            </div>
+
+
+            <div class="md:col-span-2 text-center text-pink-300 text-xl font-semibold -mb-4">
+                finally,
+            </div>
+            <style>
+                @keyframes fadeInUp {
+                    0% { opacity: 0; transform: translateY(10px); }
+                    100% { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-in {
+                    animation: fadeInUp 1s ease-out;
+                }
+            </style>
+
+            <div class="card md:col-span-2">
+                <h2 class="card-title">Your Love Over Time</h2>
+                <p class="text-center text-sm text-pink-300 -mt-3 mb-2">Karon you are my precious little baby who loves me more than everything!</p>
+                <div class="chart-container !h-80"><canvas id="loveScoreChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            try {
+                // Spotlight Effect
+                const body = document.body;
+                body.addEventListener('mousemove', e => {
+                    body.style.setProperty('--spotlight-x', `${e.clientX}px`);
+                    body.style.setProperty('--spotlight-y', `${e.clientY}px`);
+                });
+
+                // Data from Flask
+                const labels = JSON.parse('{{ labels|safe }}');
+                const messageCounts = JSON.parse('{{ message_counts|safe }}');
+                const nicknameCounts = JSON.parse('{{ nickname_counts|safe }}');
+                const laughCounts = JSON.parse('{{ laugh_counts|safe }}');
+                const madCounts = JSON.parse('{{ mad_counts|safe }}');
+                const questionCounts = JSON.parse('{{ question_counts|safe }}');
+                const starterCounts = JSON.parse('{{ starter_counts|safe }}');
+                const doubleTextCounts = JSON.parse('{{ double_text_counts|safe }}');
+                const dhruvLetterCounts = JSON.parse('{{ dhruv_letter_counts|safe }}');
+                const kavuLetterCounts = JSON.parse('{{ kavu_letter_counts|safe }}');
+                const monthLabels = JSON.parse('{{ month_labels|safe }}');
+                const heatmapData = JSON.parse('{{ heatmap_data|safe }}');
+                const commonWords = JSON.parse('{{ common_words|safe }}');
+                const rollingAvgDates = JSON.parse('{{ rolling_avg_dates|safe }}');
+                const rollingAvgValues = JSON.parse('{{ rolling_avg_values|safe }}');
+                const longestStreaks = JSON.parse('{{ longest_streaks | safe }}');
+                const longestGaps = JSON.parse('{{ longest_gaps | safe }}');
+                const chartColors = ['#f9a8d4', '#f472b6', '#ec4899', '#db2777', '#be185d'];
+                const textColor = '#fce4ec';
+                const gridColor = 'rgba(252, 228, 236, 0.1)';
+
+                document.getElementById('dhruv-streak').innerText = `${longestStreaks['Dhruv']} min`;
+                document.getElementById('kavu-streak').innerText = `${longestStreaks['Kavu']} min`;
+
+                document.getElementById('dhruv-gap').innerText = `${longestGaps['Dhruv']} hrs`;
+                document.getElementById('kavu-gap').innerText = `${longestGaps['Kavu']} hrs`;
+                const chartOptions = {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false, labels: { color: textColor } } },
+                    scales: {
+                        x: { ticks: { color: textColor }, grid: { color: gridColor } },
+                        y: { ticks: { color: textColor }, grid: { color: gridColor } }
+                    }
+                };
+                const doughnutOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { color: textColor } } } };
+
+                // --- Standard Charts (UPDATED with multi-color bars) ---
+                new Chart(document.getElementById('messageChart'), { type: 'doughnut', data: { labels: labels, datasets: [{ data: messageCounts, backgroundColor: chartColors, borderColor: '#1a000a' }] }, options: doughnutOptions });
+                new Chart(document.getElementById('nicknameChart'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'Nickname Count', data: nicknameCounts, backgroundColor: chartColors }] }, options: chartOptions });
+                new Chart(document.getElementById('laughChart'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'Times Made Laugh', data: laughCounts, backgroundColor: chartColors }] }, options: chartOptions });
+                new Chart(document.getElementById('madChart'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'Times Made Mad', data: madCounts, backgroundColor: chartColors }] }, options: chartOptions });
+                new Chart(document.getElementById('questionChart'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'Questions Asked', data: questionCounts, backgroundColor: chartColors }] }, options: chartOptions });
+                new Chart(document.getElementById('starterChart'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'Times Texted First', data: starterCounts, backgroundColor: chartColors }] }, options: chartOptions });
+                new Chart(document.getElementById('doubleTextChart'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'Double Texts', data: doubleTextCounts, backgroundColor: chartColors }] }, options: chartOptions });
+
+                new Chart(document.getElementById('dearLetterChart'), {
+                    type: 'line', data: { labels: monthLabels, datasets: [
+                        { label: 'Dear Dhruv (from Kavu)', data: dhruvLetterCounts, borderColor: '#f472b6', backgroundColor: 'rgba(244, 114, 182, 0.2)', fill: true, tension: 0.3 },
+                        { label: 'Dear Kavu (from Dhruv)', data: kavuLetterCounts, borderColor: '#f9a8d4', backgroundColor: 'rgba(249, 168, 212, 0.2)', fill: true, tension: 0.3 }
+                    ]},
+                    options: { ...chartOptions, plugins: { legend: { display: true, labels: { color: textColor } } } }
+                });
+                new Chart(document.getElementById('rollingAvgChart'), {
+                    type: 'line', data: { labels: rollingAvgDates, datasets: [{ label: '7-Day Rolling Average', data: rollingAvgValues, borderColor: '#f472b6', backgroundColor: 'rgba(244, 114, 182, 0.2)', fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 5 }] },
+                    options: { ...chartOptions, scales: { x: { type: 'time', time: { unit: 'month' }, ticks: { color: textColor }, grid: { color: gridColor } }, y: { ticks: { color: textColor }, grid: { color: gridColor } } } }
+                });
+
+                // Most Used Words Pie Charts
+                const topDhruvWords = JSON.parse('{{ top_dhruv_words | safe }}');
+                const topKavuWords = JSON.parse('{{ top_kavu_words | safe }}');
+
+                new Chart(document.getElementById('dhruvWordsChart'), {
+                    type: 'pie',
+                    data: {
+                        labels: topDhruvWords.map(d => d[0]),
+                        datasets: [{
+                            data: topDhruvWords.map(d => d[1]),
+                            backgroundColor: chartColors.concat(chartColors)
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: { color: textColor }
+                            }
+                        }
+                    }
+                });
+
+                new Chart(document.getElementById('kavuWordsChart'), {
+                    type: 'pie',
+                    data: {
+                        labels: topKavuWords.map(d => d[0]),
+                        datasets: [{
+                            data: topKavuWords.map(d => d[1]),
+                            backgroundColor: chartColors.concat(chartColors)
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: { color: textColor }
+                            }
+                        }
+                    }
+                });
+
+                // Her Love Over Time Chart
+                const loveScoreDates = JSON.parse('{{ love_score_dates|safe }}');
+                const loveScoreValues = JSON.parse('{{ love_score_values|safe }}');
+
+                new Chart(document.getElementById('loveScoreChart'), {
+                    type: 'line',
+                    data: {
+                        labels: loveScoreDates,
+                        datasets: [{
+                            label: "Her Love (100/100)",
+                            data: loveScoreValues,
+                            borderColor: '#f9a8d4',
+                            backgroundColor: 'rgba(249, 168, 212, 0.2)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 2,
+                            pointHoverRadius: 5
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: { unit: 'month' },
+                                ticks: { color: textColor },
+                                grid: { color: gridColor }
+                            },
+                            y: {
+                                min: 0,
+                                max: 110,
+                                ticks: { color: textColor },
+                                grid: { color: gridColor }
+                            }
+                        }
+                    }
+                });
+
+                // --- D3 Word Cloud ---
+                try {
+                    function drawWordCloud(selector, words) {
+                        if (!words || words.length === 0) return;
+                        const container = d3.select(selector);
+                        const width = container.node().getBoundingClientRect().width;
+                        const height = container.node().getBoundingClientRect().height;
+
+                        const layout = d3.layout.cloud().size([width, height])
+                            .words(words
+                                .sort((a, b) => b[1] - a[1]) // sort by frequency descending
+                                .map((d, i) => ({ text: d[0], size: Math.log(d[1] + 1) * 10 + 10, rotate: 0, index: i }))
+                            )
+                            .padding(5)
+                            .rotate(d => d.rotate)
+                            .fontSize(d => d.size)
+                            .on("end", draw);
+                        layout.start();
+
+                        function draw(words) {
+                            container.select("svg").remove();
+                            d3.select(selector).append("svg").attr("width", layout.size()[0]).attr("height", layout.size()[1])
+                                .append("g").attr("transform", `translate(${width / 2},${height / 2})`)
+                                .selectAll("text")
+                                .data(words.sort((a, b) => a.index - b.index))
+                                .enter().append("text")
+                                .style("font-size", d => `${d.size}px`).style("font-family", "Impact")
+                                .style("fill", (d, i) => chartColors[i % chartColors.length])
+                                .attr("text-anchor", "middle").attr("transform", d => `translate(${[d.x, d.y]})rotate(${d.rotate})`)
+                                .text(d => d.text);
+                        }
+                    }
+                    drawWordCloud("#commonWordCloud", commonWords || []);
+                } catch (e) { console.error("Word Cloud Error:", e); }
+
+                // --- D3 Heatmap ---
+                try {
+                    function drawHeatmap() {
+                        if (!heatmapData || heatmapData.length === 0) return;
+                        const dataMap = new Map(heatmapData.map(d => [d.date, d.count]));
+                        const dates = Array.from(dataMap.keys()).map(d => new Date(d));
+                        const startDate = d3.min(dates);
+                        const endDate = d3.max(dates);
+
+                        const weeks = d3.timeWeek.count(startDate, endDate) + 1;
+                        const cellSize = 15;
+                        const width = (weeks * cellSize);
+                        const height = cellSize * 7;
+
+                        const maxCount = d3.max(Array.from(dataMap.values()));
+                        const colorScale = d3.scaleSequential(d3.interpolatePuRd).domain([0, maxCount > 0 ? maxCount : 1]);
+
+                        const svg = d3.select("#heatmap").append("svg")
+                            .attr("width", width).attr("height", height)
+                            .append("g");
+
+                        const allDays = d3.timeDays(startDate, d3.timeDay.offset(endDate, 1));
+
+                        svg.append("g")
+                            .selectAll(".day").data(allDays).enter().append("rect")
+                            .attr("width", cellSize - 1).attr("height", cellSize - 1)
+                            .attr("x", d => d3.timeWeek.count(startDate, d) * cellSize)
+                            .attr("y", d => d.getDay() * cellSize)
+                            .attr("fill", d => {
+                                const dateString = d3.timeFormat("%Y-%m-%d")(d);
+                                const count = dataMap.get(dateString);
+                                return count ? colorScale(count) : '#370617';
+                            })
+                            .append("title").text(d => {
+                                const dateString = d3.timeFormat("%Y-%m-%d")(d);
+                                return `${dateString}: ${dataMap.get(dateString) || 0} messages`;
+                            });
+                    }
+                    drawHeatmap();
+                } catch (e) { console.error("Heatmap Error:", e); }
+            } catch (e) {
+                console.error("Main script error:", e);
+                document.body.innerHTML = "<div class='text-red-500 text-center p-8'>A critical error occurred while rendering the charts. Please check the console for details.</div>";
+            }
+        });
+    </script>
+</body>
+</html>
